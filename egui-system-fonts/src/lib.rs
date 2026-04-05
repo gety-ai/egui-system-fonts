@@ -16,15 +16,19 @@
 //! Add system fonts as fallback only (keeps existing font priority):
 //!
 //! ```no_run
-//! # use egui_system_fonts::{extend_auto, FontStyle};
+//! # use egui_system_fonts::{add_auto, FontStyle};
 //! # fn demo(ctx: &egui::Context) {
 //! let mut defs = egui::FontDefinitions::default();
-//! extend_auto(ctx, &mut defs, FontStyle::Sans);
+//! add_auto(ctx, &mut defs, FontStyle::Sans);
 //! # }
 //! ```
 //!
-use egui::{FontData, FontDefinitions, FontFamily};
+use egui::{
+    epaint::text::{FontInsert, FontPriority, InsertFontFamily},
+    FontData, FontDefinitions, FontFamily,
+};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use system_fonts::FoundFontSource;
 pub use system_fonts::{FontPreset, FontRegion, FontStyle};
 
@@ -104,17 +108,13 @@ where
 /// # Examples
 ///
 /// ```no_run
-/// # use egui_system_fonts::{extend_auto, FontStyle};
+/// # use egui_system_fonts::{add_auto, FontStyle};
 /// # fn demo(ctx: &egui::Context) {
 /// let mut defs = egui::FontDefinitions::default();
-/// extend_auto(ctx, &mut defs, FontStyle::Sans);
+/// add_auto(ctx, &mut defs, FontStyle::Sans);
 /// # }
 /// ```
-pub fn extend_auto(
-    ctx: &egui::Context,
-    defs: &mut FontDefinitions,
-    style: FontStyle,
-) -> Vec<String> {
+pub fn add_auto(ctx: &egui::Context, defs: &mut FontDefinitions, style: FontStyle) -> Vec<String> {
     let (locale, region, fonts) = system_fonts::find_for_system_locale(style);
     log::info!(
         "Detected locale: {:?}, region: {:?}, style: {:?}, candidates: {}",
@@ -123,11 +123,18 @@ pub fn extend_auto(
         style,
         fonts.len()
     );
-    let installed = append_found_fonts(defs, fonts);
-    if !installed.is_empty() {
-        ctx.set_fonts(defs.clone());
-    }
-    installed
+    add_found_fonts(ctx, defs, fonts)
+}
+#[deprecated(
+    since = "0.34.0",
+    note = "Renamed to `add_auto` for egui 0.34. Use `add_auto` instead."
+)]
+pub fn extend_auto(
+    ctx: &egui::Context,
+    defs: &mut FontDefinitions,
+    style: FontStyle,
+) -> Vec<String> {
+    add_auto(ctx, defs, style)
 }
 
 /// Appends system fonts for the given region as fallback families to an existing `FontDefinitions`.
@@ -138,20 +145,32 @@ pub fn extend_auto(
 /// # Examples
 ///
 /// ```no_run
-/// # use egui_system_fonts::{extend_with_region, FontRegion, FontStyle};
+/// # use egui_system_fonts::{add_with_region, FontRegion, FontStyle};
 /// # fn demo(ctx: &egui::Context) {
 /// let mut defs = egui::FontDefinitions::default();
-/// extend_with_region(ctx, &mut defs, FontRegion::Japanese, FontStyle::Sans);
+/// add_with_region(ctx, &mut defs, FontRegion::Japanese, FontStyle::Sans);
 /// # }
 /// ```
-pub fn extend_with_region(
+pub fn add_with_region(
     ctx: &egui::Context,
     defs: &mut FontDefinitions,
     region: FontRegion,
     style: FontStyle,
 ) -> Vec<String> {
     let presets = system_fonts::presets_for_region(region);
-    extend_with_presets(ctx, defs, presets, style)
+    add_with_presets(ctx, defs, presets, style)
+}
+#[deprecated(
+    since = "0.34.0",
+    note = "Renamed to `add_with_region` for egui 0.34. Use `add_with_region` instead."
+)]
+pub fn extend_with_region(
+    ctx: &egui::Context,
+    defs: &mut FontDefinitions,
+    region: FontRegion,
+    style: FontStyle,
+) -> Vec<String> {
+    add_with_region(ctx, defs, region, style)
 }
 
 /// Appends system fonts resolved from the given presets as fallback families to an existing `FontDefinitions`.
@@ -162,14 +181,14 @@ pub fn extend_with_region(
 /// # Examples
 ///
 /// ```no_run
-/// # use egui_system_fonts::{extend_with_presets, FontPreset, FontStyle};
+/// # use egui_system_fonts::{add_with_presets, FontPreset, FontStyle};
 /// # fn demo(ctx: &egui::Context) {
 /// let mut defs = egui::FontDefinitions::default();
 /// let presets = [FontPreset::TraditionalChinese, FontPreset::Latin];
-/// extend_with_presets(ctx, &mut defs, presets, FontStyle::Serif);
+/// add_with_presets(ctx, &mut defs, presets, FontStyle::Serif);
 /// # }
 /// ```
-pub fn extend_with_presets<I>(
+pub fn add_with_presets<I>(
     ctx: &egui::Context,
     defs: &mut FontDefinitions,
     presets: I,
@@ -179,11 +198,22 @@ where
     I: IntoIterator<Item = FontPreset>,
 {
     let fonts = system_fonts::find_from_presets(presets, style);
-    let installed = append_found_fonts(defs, fonts);
-    if !installed.is_empty() {
-        ctx.set_fonts(defs.clone());
-    }
-    installed
+    add_found_fonts(ctx, defs, fonts)
+}
+#[deprecated(
+    since = "0.34.0",
+    note = "Renamed to `add_with_presets` for egui 0.34. Use `add_with_presets` instead."
+)]
+pub fn extend_with_presets<I>(
+    ctx: &egui::Context,
+    defs: &mut FontDefinitions,
+    presets: I,
+    style: FontStyle,
+) -> Vec<String>
+where
+    I: IntoIterator<Item = FontPreset>,
+{
+    add_with_presets(ctx, defs, presets, style)
 }
 
 fn set_found_fonts(ctx: &egui::Context, fonts: Vec<system_fonts::FoundFont>) -> Vec<String> {
@@ -197,8 +227,9 @@ fn set_found_fonts(ctx: &egui::Context, fonts: Vec<system_fonts::FoundFont>) -> 
             continue;
         };
 
-        defs.font_data
-            .insert(f.key.clone(), FontData::from_owned(bytes).into());
+        let data = FontData::from_owned(bytes);
+
+        defs.font_data.insert(f.key.clone(), Arc::new(data.clone()));
 
         keys_in_priority.push(f.key.clone());
         installed_names.push(f.family);
@@ -220,12 +251,12 @@ fn set_found_fonts(ctx: &egui::Context, fonts: Vec<system_fonts::FoundFont>) -> 
     installed_names
 }
 
-fn append_found_fonts(
+fn add_found_fonts(
+    ctx: &egui::Context,
     defs: &mut FontDefinitions,
     fonts: Vec<system_fonts::FoundFont>,
 ) -> Vec<String> {
     let mut installed_names: Vec<String> = Vec::new();
-    let mut keys_in_priority: Vec<String> = Vec::new();
 
     for f in fonts {
         if defs.font_data.contains_key(&f.key) {
@@ -236,20 +267,29 @@ fn append_found_fonts(
             continue;
         };
 
-        defs.font_data
-            .insert(f.key.clone(), FontData::from_owned(bytes).into());
+        let data = FontData::from_owned(bytes);
 
-        keys_in_priority.push(f.key.clone());
+        defs.font_data.insert(f.key.clone(), Arc::new(data.clone()));
+
+        insert_back(&mut defs.families, FontFamily::Proportional, f.key.clone());
+        insert_back(&mut defs.families, FontFamily::Monospace, f.key.clone());
+
+        ctx.add_font(FontInsert {
+            name: f.key.clone(),
+            data,
+            families: vec![
+                InsertFontFamily {
+                    family: FontFamily::Proportional,
+                    priority: FontPriority::Lowest,
+                },
+                InsertFontFamily {
+                    family: FontFamily::Monospace,
+                    priority: FontPriority::Lowest,
+                },
+            ],
+        });
+
         installed_names.push(f.family);
-    }
-
-    if installed_names.is_empty() {
-        return vec![];
-    }
-
-    for key in keys_in_priority.into_iter() {
-        insert_back(&mut defs.families, FontFamily::Proportional, key.clone());
-        insert_back(&mut defs.families, FontFamily::Monospace, key);
     }
 
     installed_names

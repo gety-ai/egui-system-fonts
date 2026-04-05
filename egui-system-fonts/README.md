@@ -3,7 +3,7 @@
 System font loader helpers for `egui`.
 
 - Auto-detects the system locale and picks a reasonable font fallback chain
-- Can either replace `egui` fonts (set) or append fallback fonts only (extend)
+- Can either replace `egui` fonts (set) or append fallback fonts only (add)
 - Supports region presets (Korean/Japanese/Chinese/Cyrillic/Latin)
 
 ## Installation
@@ -28,11 +28,11 @@ fn setup_fonts(ctx: &egui::Context) {
 ### Fallback only (keep existing priorities)
 
 ```rust,no_run
-use egui_system_fonts::{extend_auto, FontStyle};
+use egui_system_fonts::{add_auto, FontStyle};
 
 fn setup_fonts(ctx: &egui::Context) {
     let mut defs = egui::FontDefinitions::default();
-    extend_auto(ctx, &mut defs, FontStyle::Sans);
+    add_auto(ctx, &mut defs, FontStyle::Sans);
 }
 ```
 
@@ -60,7 +60,7 @@ fn setup_fonts(ctx: &egui::Context) {
 ## Notes
 
 - If no matching system fonts are found, the functions return an empty list.
-- `extend_*` only applies updated definitions when at least one font was added.
+- `add_*` adds fonts to the `egui::Context` as fallback fonts and also updates the provided `FontDefinitions`.
 - `set_*` overwrites the default `egui` fonts.
 
 ## License

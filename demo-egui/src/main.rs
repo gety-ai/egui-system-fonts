@@ -1,6 +1,6 @@
 use eframe::egui;
 use egui_system_fonts::{
-    extend_auto, extend_with_region, set_auto, set_with_region, FontRegion, FontStyle,
+    add_auto, add_with_region, set_auto, set_with_region, FontRegion, FontStyle,
 };
 
 fn main() -> eframe::Result<()> {
@@ -47,7 +47,7 @@ The quick brown fox jumps over the lazy dog.
 // 5. Cyrillic
 Съешь же ещё этих мягких французских булок, да выпей чаю."#
                 .to_owned(),
-            logs: vec!["Ready. Select options and click Set/Extend.".to_owned()],
+            logs: vec!["Ready. Select options and click Set/Add.".to_owned()],
 
             selected_region: None,
             selected_style: FontStyle::Sans,
@@ -56,12 +56,12 @@ The quick brown fox jumps over the lazy dog.
 }
 
 impl eframe::App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::bottom("log_panel")
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::Panel::bottom("log_panel")
             .resizable(true)
-            .min_height(100.0)
-            .default_height(150.0)
-            .show(ctx, |ui| {
+            .min_size(100.0)
+            .default_size(150.0)
+            .show_inside(ui, |ui| {
                 ui.heading("Logs");
                 egui::ScrollArea::vertical()
                     .id_salt("log_scroll")
@@ -74,7 +74,7 @@ impl eframe::App for MyApp {
                     });
             });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.group(|ui| {
                 ui.heading("Font Controls");
                 ui.add_space(5.0);
@@ -155,8 +155,8 @@ impl eframe::App for MyApp {
                         self.add_log(format!("LC_ALL={:?}", std::env::var("LC_ALL")));
                         self.add_log(format!("LC_CTYPE={:?}", std::env::var("LC_CTYPE")));
                         let installed = match self.selected_region {
-                            None => set_auto(ctx, self.selected_style),
-                            Some(region) => set_with_region(ctx, region, self.selected_style),
+                            None => set_auto(ui.ctx(), self.selected_style),
+                            Some(region) => set_with_region(ui.ctx(), region, self.selected_style),
                         };
 
                         let region_text = match self.selected_region {
@@ -172,16 +172,16 @@ impl eframe::App for MyApp {
                         ));
                     }
 
-                    if ui.button("Extend (Fallback Only)").clicked() {
+                    if ui.button("Add (Fallback Only)").clicked() {
                         self.add_log(format!("LANG={:?}", std::env::var("LANG")));
                         self.add_log(format!("LC_ALL={:?}", std::env::var("LC_ALL")));
                         self.add_log(format!("LC_CTYPE={:?}", std::env::var("LC_CTYPE")));
                         let mut defs = egui::FontDefinitions::default();
 
                         let installed = match self.selected_region {
-                            None => extend_auto(ctx, &mut defs, self.selected_style),
+                            None => add_auto(ui.ctx(), &mut defs, self.selected_style),
                             Some(region) => {
-                                extend_with_region(ctx, &mut defs, region, self.selected_style)
+                                add_with_region(ui.ctx(), &mut defs, region, self.selected_style)
                             }
                         };
 
@@ -191,7 +191,7 @@ impl eframe::App for MyApp {
                         };
 
                         self.add_log(format!(
-                            "Extend Fonts: Region={}, Style={:?}, Added={}",
+                            "Add Fonts: Region={}, Style={:?}, Added={}",
                             region_text,
                             self.selected_style,
                             installed.len()
@@ -199,7 +199,7 @@ impl eframe::App for MyApp {
                     }
 
                     if ui.button("Reset (Default)").clicked() {
-                        ctx.set_fonts(egui::FontDefinitions::default());
+                        ui.ctx().set_fonts(egui::FontDefinitions::default());
                         self.add_log("Reset to egui defaults.".to_string());
                     }
                 });
