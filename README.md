@@ -20,7 +20,7 @@ Add to your project:
 
 ```toml
 [dependencies]
-egui-system-fonts = "0.34.0"
+egui-system-fonts = "0.34.1"
 ```
 
 Minimal usage:

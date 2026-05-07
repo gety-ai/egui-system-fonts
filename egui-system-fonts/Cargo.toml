@@ -1,6 +1,6 @@
 [package]
 name = "egui-system-fonts"
-version = "0.34.0"
+version = "0.34.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "System font loader helpers for egui: auto-detect locale, set/add fallback fonts."
