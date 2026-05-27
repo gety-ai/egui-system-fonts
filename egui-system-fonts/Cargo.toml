@@ -1,6 +1,6 @@
 [package]
 name = "egui-system-fonts"
-version = "0.34.1"
+version = "0.34.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "System font loader helpers for egui: auto-detect locale, set/add fallback fonts."
@@ -14,5 +14,8 @@ rust-version = "1.88"
 
 [dependencies]
 egui = "0.34"
-system-fonts = "0.1"
+system-fonts = "0.1.2"
 log = "0.4"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+ehttp = "0.7.0"

@@ -1,90 +1,34 @@
-# egui_system_fonts
+# egui-system-fonts
 
-System font loader helpers for `egui`.
-
-- Auto-detects the system locale and picks a reasonable font fallback chain
-- Can either replace `egui` fonts (set) or append fallback fonts only (add)
-- Supports region presets (Korean/Japanese/Chinese/Cyrillic/Latin)
+System font loader for `egui`. Auto-detects locale and applies a matching font fallback chain.
 
 ## Installation
 
 ```toml
 [dependencies]
-egui-system-fonts = "0.34.1"
+egui-system-fonts = "0.34.2"
 ```
 
 ## Usage
 
-### Replace all egui fonts (auto-detect locale)
-
-```rust,no_run
+```rust
 use egui_system_fonts::{set_auto, FontStyle};
 
-fn setup_fonts(ctx: &egui::Context) {
-    set_auto(ctx, FontStyle::Sans);
+impl MyApp {
+    fn new(cc: &eframe::CreationContext) -> Self {
+        set_auto(&cc.egui_ctx, FontStyle::Sans);
+        Self { /* ... */ }
+    }
 }
 ```
 
-### Fallback only (keep existing priorities)
+Use `add_auto` instead of `set_auto` to keep existing fonts and append system fonts as fallback.
 
-```rust,no_run
-use egui_system_fonts::{add_auto, FontStyle};
+See [docs.rs](https://docs.rs/egui-system-fonts) for region and preset options.
 
-fn setup_fonts(ctx: &egui::Context) {
-    let mut defs = egui::FontDefinitions::default();
-    add_auto(ctx, &mut defs, FontStyle::Sans);
-}
-```
+## WASM
 
-### Force a region
-
-```rust,no_run
-use egui_system_fonts::{set_with_region, FontRegion, FontStyle};
-
-fn setup_fonts(ctx: &egui::Context) {
-    set_with_region(ctx, FontRegion::Korean, FontStyle::Sans);
-}
-```
-
-### Fallback only, force a region
-
-```rust,no_run
-use egui_system_fonts::{add_with_region, FontRegion, FontStyle};
-
-fn setup_fonts(ctx: &egui::Context) {
-    let mut defs = egui::FontDefinitions::default();
-    add_with_region(ctx, &mut defs, FontRegion::Japanese, FontStyle::Sans);
-}
-```
-
-### Use custom presets
-
-```rust,no_run
-use egui_system_fonts::{set_with_presets, FontPreset, FontStyle};
-
-fn setup_fonts(ctx: &egui::Context) {
-    let presets = [FontPreset::Korean, FontPreset::Latin];
-    set_with_presets(ctx, presets, FontStyle::Sans);
-}
-```
-
-### Fallback only, custom presets
-
-```rust,no_run
-use egui_system_fonts::{add_with_presets, FontPreset, FontStyle};
-
-fn setup_fonts(ctx: &egui::Context) {
-    let mut defs = egui::FontDefinitions::default();
-    let presets = [FontPreset::TraditionalChinese, FontPreset::Latin];
-    add_with_presets(ctx, &mut defs, presets, FontStyle::Serif);
-}
-```
-
-## Notes
-
-- If no matching system fonts are found, the functions return an empty list.
-- `add_*` adds fonts to the `egui::Context` as fallback fonts and also updates the provided `FontDefinitions`.
-- `set_*` overwrites the default `egui` fonts.
+On WASM, fonts are downloaded asynchronously from [noto-cjk](https://github.com/notofonts/noto-cjk) via jsDelivr CDN.
 
 ## License
 

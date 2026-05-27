@@ -3,6 +3,7 @@ use egui_system_fonts::{
     add_auto, add_with_region, set_auto, set_with_region, FontRegion, FontStyle,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     env_logger::init();
 
@@ -16,6 +17,32 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(|_cc| Ok(Box::new(MyApp::default()))),
     )
+}
+
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    use eframe::wasm_bindgen::JsCast as _;
+
+    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+    let web_options = eframe::WebOptions::default();
+    let canvas = web_sys::window()
+        .unwrap()
+        .document()
+        .unwrap()
+        .get_element_by_id("canvas")
+        .unwrap()
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .unwrap();
+    wasm_bindgen_futures::spawn_local(async move {
+        eframe::WebRunner::new()
+            .start(
+                canvas,
+                web_options,
+                Box::new(|_cc| Ok(Box::new(MyApp::default()))),
+            )
+            .await
+            .expect("failed to start eframe");
+    });
 }
 
 struct MyApp {
@@ -151,9 +178,12 @@ impl eframe::App for MyApp {
 
                 ui.horizontal(|ui| {
                     if ui.button("Set (Replace All)").clicked() {
-                        self.add_log(format!("LANG={:?}", std::env::var("LANG")));
-                        self.add_log(format!("LC_ALL={:?}", std::env::var("LC_ALL")));
-                        self.add_log(format!("LC_CTYPE={:?}", std::env::var("LC_CTYPE")));
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            self.add_log(format!("LANG={:?}", std::env::var("LANG")));
+                            self.add_log(format!("LC_ALL={:?}", std::env::var("LC_ALL")));
+                            self.add_log(format!("LC_CTYPE={:?}", std::env::var("LC_CTYPE")));
+                        }
                         let installed = match self.selected_region {
                             None => set_auto(ui.ctx(), self.selected_style),
                             Some(region) => set_with_region(ui.ctx(), region, self.selected_style),
@@ -173,16 +203,15 @@ impl eframe::App for MyApp {
                     }
 
                     if ui.button("Add (Fallback Only)").clicked() {
-                        self.add_log(format!("LANG={:?}", std::env::var("LANG")));
-                        self.add_log(format!("LC_ALL={:?}", std::env::var("LC_ALL")));
-                        self.add_log(format!("LC_CTYPE={:?}", std::env::var("LC_CTYPE")));
-                        let mut defs = egui::FontDefinitions::default();
-
-                        let installed = match self.selected_region {
-                            None => add_auto(ui.ctx(), &mut defs, self.selected_style),
-                            Some(region) => {
-                                add_with_region(ui.ctx(), &mut defs, region, self.selected_style)
-                            }
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            self.add_log(format!("LANG={:?}", std::env::var("LANG")));
+                            self.add_log(format!("LC_ALL={:?}", std::env::var("LC_ALL")));
+                            self.add_log(format!("LC_CTYPE={:?}", std::env::var("LC_CTYPE")));
+                        }
+                        match self.selected_region {
+                            None => add_auto(ui.ctx(), self.selected_style),
+                            Some(region) => add_with_region(ui.ctx(), region, self.selected_style),
                         };
 
                         let region_text = match self.selected_region {
@@ -191,10 +220,8 @@ impl eframe::App for MyApp {
                         };
 
                         self.add_log(format!(
-                            "Add Fonts: Region={}, Style={:?}, Added={}",
-                            region_text,
-                            self.selected_style,
-                            installed.len()
+                            "Add Fonts: Region={}, Style={:?}",
+                            region_text, self.selected_style,
                         ));
                     }
 
